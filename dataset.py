@@ -37,7 +37,7 @@ from torch.utils.data import Dataset
 
 # Key names inside the HDF5 files differ per split.
 _H5_KEYS = {
-    "train": "Xr_train",
+    "train": "X_train",
     "val":   "X_val",
     "test":  "X_test",
 }
