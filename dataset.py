@@ -24,7 +24,7 @@ Preprocessing
 ─────────────
 1. Center-crop 1024 → crop_len (default 128) samples
 2. Transpose to (2, crop_len) for PyTorch
-3. Normalise each channel independently to [-1, 1]
+3. Normalise by Global Complex Magnitude to preserve phase.
 """
 
 import os
@@ -109,11 +109,12 @@ class DeepRadarDataset(Dataset):
         # ── transpose to (2, crop_len) for PyTorch Conv1d ─────────────────
         signal = signal.T.copy()   # (2, crop_len)
 
-        # ── normalise each channel to [-1, 1] ──────────────────────────────
-        for ch in range(signal.shape[0]):
-            mx = np.abs(signal[ch]).max()
-            if mx > 0:
-                signal[ch] /= mx
+        # ── normalise preserving phase (CORRECTED) ────────────────────────
+        # Calculate the max complex magnitude: sqrt(I^2 + Q^2)
+        # We normalize both I and Q by this single scalar to keep their ratio intact.
+        complex_mag = np.abs(signal[0] + 1j * signal[1]).max()
+        if complex_mag > 0:
+            signal = signal / complex_mag
 
         signal_t = torch.from_numpy(signal)             # (2, 128) float32
         label_t  = torch.tensor(label, dtype=torch.long)
