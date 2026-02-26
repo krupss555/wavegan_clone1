@@ -39,7 +39,7 @@ def _stft_power(signal_np, win=32, hop=8):
 
 def save_spectrogram_comparison(real_iq, fake_iq, epoch: int, out_dir: str):
     """
-    Plot STFT spectrograms of one real and one fake IQ sample (I channel).
+    Plot STFT spectrograms and Time-Domain Line Graphs of one real and one fake IQ sample.
 
     Parameters
     ----------
@@ -55,28 +55,63 @@ def save_spectrogram_comparison(real_iq, fake_iq, epoch: int, out_dir: str):
     if isinstance(fake_iq, torch.Tensor):
         fake_iq = fake_iq.detach().cpu().numpy()
 
-    fig, axes = plt.subplots(2, 2, figsize=(10, 6))
-    fig.suptitle(f"Epoch {epoch} – STFT Spectrograms (I and Q channels)")
+    fig, axes = plt.subplots(2, 2, figsize=(14, 8))
+    fig.suptitle(f"Epoch {epoch} – Radar Signal Comparison", fontsize=16)
 
-    labels = ["Real", "Fake"]
-    signals = [real_iq, fake_iq]
-    ch_names = ["I channel", "Q channel"]
+    time_axis = np.arange(128)
 
-    for col, (sig, lbl) in enumerate(zip(signals, labels)):
-        for row, ch in enumerate([0, 1]):
-            spec = _stft_power(sig[ch], win=32, hop=8)
-            axes[row][col].imshow(
-                10 * np.log10(spec + 1e-8),
-                aspect="auto", origin="lower",
-                cmap="viridis"
-            )
-            axes[row][col].set_title(f"{lbl} – {ch_names[ch]}")
-            axes[row][col].set_xlabel("Time frame")
-            axes[row][col].set_ylabel("Freq bin")
+    # ─────────────────────────────────────────────────────────
+    # ROW 1: TIME DOMAIN LINE GRAPHS (Real vs Fake Overlay)
+    # ─────────────────────────────────────────────────────────
+    
+    # Top-Left: I Channel
+    axes[0, 0].plot(time_axis, real_iq[0], label="Real Signal", color="blue", linewidth=1.5)
+    axes[0, 0].plot(time_axis, fake_iq[0], label="Fake Signal", color="red", linewidth=1.5, linestyle="--")
+    axes[0, 0].set_title("I-Channel: Time Domain Comparison")
+    axes[0, 0].set_xlabel("Time (samples)")
+    axes[0, 0].set_ylabel("Normalized Amplitude")
+    axes[0, 0].legend(loc="upper right")
+    axes[0, 0].grid(True, linestyle=":", alpha=0.7)
+
+    # Top-Right: Q Channel
+    axes[0, 1].plot(time_axis, real_iq[1], label="Real Signal", color="darkorange", linewidth=1.5)
+    axes[0, 1].plot(time_axis, fake_iq[1], label="Fake Signal", color="green", linewidth=1.5, linestyle="--")
+    axes[0, 1].set_title("Q-Channel: Time Domain Comparison")
+    axes[0, 1].set_xlabel("Time (samples)")
+    axes[0, 1].set_ylabel("Normalized Amplitude")
+    axes[0, 1].legend(loc="upper right")
+    axes[0, 1].grid(True, linestyle=":", alpha=0.7)
+
+    # ─────────────────────────────────────────────────────────
+    # ROW 2: SMOOTHED SPECTROGRAMS (I Channel)
+    # ─────────────────────────────────────────────────────────
+    
+    real_spec = _stft_power(real_iq[0], win=32, hop=8)
+    fake_spec = _stft_power(fake_iq[0], win=32, hop=8)
+
+    # Bottom-Left: Real Spectrogram
+    im_r = axes[1, 0].imshow(
+        10 * np.log10(real_spec + 1e-8),
+        aspect="auto", origin="lower", cmap="jet", interpolation="bicubic"
+    )
+    axes[1, 0].set_title("Real Signal (I-Channel) - Smoothed Spectrogram")
+    axes[1, 0].set_xlabel("Time Frame")
+    axes[1, 0].set_ylabel("Frequency Bin")
+    fig.colorbar(im_r, ax=axes[1, 0], fraction=0.046, pad=0.04, label="Power (dB)")
+
+    # Bottom-Right: Fake Spectrogram
+    im_f = axes[1, 1].imshow(
+        10 * np.log10(fake_spec + 1e-8),
+        aspect="auto", origin="lower", cmap="jet", interpolation="bicubic"
+    )
+    axes[1, 1].set_title("Fake Signal (I-Channel) - Smoothed Spectrogram")
+    axes[1, 1].set_xlabel("Time Frame")
+    axes[1, 1].set_ylabel("Frequency Bin")
+    fig.colorbar(im_f, ax=axes[1, 1], fraction=0.046, pad=0.04, label="Power (dB)")
 
     plt.tight_layout()
     save_path = os.path.join(out_dir, f"epoch_{epoch:04d}.png")
-    plt.savefig(save_path, dpi=100)
+    plt.savefig(save_path, dpi=150)
     plt.close(fig)
 
     # ── Print signal statistics alongside the saved PNG ───────────────────
@@ -98,7 +133,7 @@ def save_spectrogram_comparison(real_iq, fake_iq, epoch: int, out_dir: str):
     else:
         f = fake_iq
 
-    print(f"[Vis] Epoch {epoch:04d} → {save_path}")
+    print(f"[Vis] Epoch {epoch:04d} → Saved visual comparison to {save_path}")
     _signal_stats(r, "Real")
     _signal_stats(f, "Fake")
 

@@ -9,4 +9,4 @@ nohup python3 train_phase1.py \
     --lr 1e-4 \
     --gp_lambda 10 \
     --num_workers 4 \
-> logs/phase1_v2.log 2>&1 &
+> logs/phase1_v3.log 2>&1 &
